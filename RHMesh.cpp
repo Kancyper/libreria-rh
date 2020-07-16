@@ -217,6 +217,13 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 	{
 		MeshMessageHeader *p = (MeshMessageHeader *)&_tmpMessage;
 
+		//TOMAS
+		//Si recibe mensaje de movil, copiar el contenido de ese mensaje y enviarlo a gateway
+		if (_flags & RH_FLAG_MOVIL)
+		{
+			sendtoWait(_tmpMessage, tmpMessageLen, GATEWAY_ADDRESS);
+		}
+
 		if (tmpMessageLen >= 1 && p->msgType == RH_MESH_MESSAGE_TYPE_APPLICATION)
 		{
 			MeshApplicationMessage *a = (MeshApplicationMessage *)p;

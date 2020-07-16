@@ -16,6 +16,14 @@
 /// previously sent message.
 #define RH_FLAGS_RETRY 0x40
 
+//TOMAS
+//Flag para identificar si el mensaje proviene de un movil o de un punto de acceso
+#define RH_FLAG_MOVIL 0x01
+
+//TOMAS
+//Address del gateway
+#define GATEWAY_ADDRESS 1
+
 /// This macro enables enhanced message deduplication behavior. This currently defaults
 /// to 0 (off), but this may change to default to 1 (on) in future releases. Consumers who
 /// want to enable this behavior should override this macro in their code and set it to 1.
