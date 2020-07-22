@@ -50,7 +50,7 @@ uint8_t RHMesh::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t f
 		if (!route && !doArp(address))
 			return RH_ROUTER_ERROR_NO_ROUTE;
 	}
-
+ 
 	// Now have a route. Contruct an application layer message and send it via that route
 	MeshApplicationMessage *a = (MeshApplicationMessage *)&_tmpMessage;
 	a->header.msgType = RH_MESH_MESSAGE_TYPE_APPLICATION;
@@ -215,7 +215,6 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 	uint8_t _flags;
 	if (RHRouter::recvfromAck(_tmpMessage, &tmpMessageLen, &_source, &_dest, &_id, &_flags))
 	{
-		Serial.println(F("Acabo de entrar con TRUE en el recvfromAck del RHMesh"));
 		MeshMessageHeader *p = (MeshMessageHeader *)&_tmpMessage;
 
 		//TOMAS
@@ -321,7 +320,6 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 			}
 		}
 	}
-	Serial.println(F("Voy a devolver FALSE del recvfromAck del RHMesh"));
 	return false;
 }
 

@@ -147,9 +147,9 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 
 			//TOMAS
 			//Si el mensaje fue enviado por un movil (tiene la flag movil), devolver un ACK
-			if ((_flags & RH_FLAG_MOVIL) && _from == 3)
+			if (_flags & RH_FLAG_MOVIL)
 			{
-				Serial.print(F("Recibi un mensaje de broadcast del nodo "));
+				Serial.print(F("Recibi un mensaje de broadcast del movil "));
 				Serial.print(_from);
 				Serial.println(F(". Ahora le envío un ACK"));
 				acknowledge(_id, _from);
@@ -173,14 +173,12 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 					*flags = _flags;
 				_seenIds[_from] = _id;
 
-				Serial.println(F("Acabo de entrar con TRUE en el recvfromAck del RHReliableDatagram"));
 				return true;
 			}
 			// Else just re-ack it and wait for a new one
 		}
 	}
 	// No message for us available
-	Serial.println(F("Voy a devolver FALSE del recvfromAck del RHReliableDatagram"));
 
 	return false;
 }

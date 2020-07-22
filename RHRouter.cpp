@@ -217,7 +217,6 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 	uint8_t _flags;
 	if (RHReliableDatagram::recvfromAck((uint8_t *)&_tmpMessage, &tmpMessageLen, &_from, &_to, &_id, &_flags))
 	{
-		Serial.println(F("Acabo de entrar con TRUE en el recvfromAck del RHRouter"));
 		// Here we simulate networks with limited visibility between nodes
 		// so we can test routing
 #ifdef RH_TEST_NETWORK
@@ -312,7 +311,6 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 		}
 		// Discard it and maybe wait for another
 	}
-	Serial.println(F("Voy a devolver FALSE del recvfromAck del RHRouter"));
 
 	return false;
 }
