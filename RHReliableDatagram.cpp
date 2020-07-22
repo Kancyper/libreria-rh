@@ -147,13 +147,14 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 
 			//TOMAS
 			//Si el mensaje fue enviado por un movil (tiene la flag movil), devolver un ACK
-			if (_flags & RH_FLAG_MOVIL)
+			if ((_flags & RH_FLAG_MOVIL) && _thisAddress != 1)
 			{
 				Serial.print(F("Recibi un mensaje de broadcast del movil "));
 				Serial.print(_from);
 				Serial.println(F(". Ahora le envío un ACK"));
 				acknowledge(_id, _from);
 			}
+
 
 			// Filter out retried messages that we have seen before. This explicitly
 			// only filters out messages that are marked as retries to protect against
