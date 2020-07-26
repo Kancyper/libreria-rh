@@ -20,6 +20,10 @@
 //Flag para identificar si el mensaje proviene de un movil o de un punto de acceso
 #define RH_FLAG_MOVIL 0x01
 
+//TOMAS
+//Address del gateway
+#define GATEWAY_ADDRESS 1
+
 /// This macro enables enhanced message deduplication behavior. This currently defaults
 /// to 0 (off), but this may change to default to 1 (on) in future releases. Consumers who
 /// want to enable this behavior should override this macro in their code and set it to 1.
@@ -136,7 +140,7 @@ public:
     /// \param[in] buf Pointer to the binary message to send
     /// \param[in] len Number of octets to send
     /// \return true if the message was transmitted and an acknowledgement was received.
-    bool sendtoWait(uint8_t* buf, uint8_t len, uint8_t address);
+    bool sendtoWait(uint8_t* buf, uint8_t len, uint8_t address, uint8_t flags = 0);
 
     /// If there is a valid message available for this node, send an acknowledgement to the SRC
     /// address (blocking until this is complete), then copy the message to buf and return true
