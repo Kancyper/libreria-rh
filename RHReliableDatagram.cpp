@@ -56,6 +56,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 
 		// Set and clear header flags depending on if this is an
 		// initial send or a retry.
+
 		uint8_t headerFlagsToSet = RH_FLAGS_NONE || flagsToSend;
 
 		// Always clear the ACK flag
@@ -69,7 +70,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 		else
 		{
 			// Not an initial send, set the RETRY flag
-			headerFlagsToSet = RH_FLAGS_RETRY;
+			headerFlagsToSet |= RH_FLAGS_RETRY;
 		}
 		setHeaderFlags(headerFlagsToSet, headerFlagsToClear);
 
@@ -103,6 +104,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 				uint8_t from, to, id, flags;
 				if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 				{
+          
 					//TOMAS
 					//Agrego "&& flags & RH_FLAG_MOVIL" en la primera clasusula
 					if ((from == address || flagsToSend & RH_FLAG_MOVIL) && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
