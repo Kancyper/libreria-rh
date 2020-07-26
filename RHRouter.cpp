@@ -258,12 +258,33 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 		Serial.println("--------------------------------------------------------------");
 		Serial.println(F("Acabo de recibir un mensaje"));
 
+		if (_flags & RH_FLAG_MOVIL)
+		{
+
+			if (source)
+				*source = _from;
+			if (dest)
+				*dest = _to;
+			if (id)
+				*id = _id;
+			if (flags)
+				*flags = _flags;
+			uint8_t msgLen = tmpMessageLen;
+			if (*len > msgLen)
+				*len = msgLen;
+			memcpy(buf, &_tmpMessage, *len);
+
+			return true; 
+		}
+
 		peekAtMessage(&_tmpMessage, tmpMessageLen);
 		// See if its for us or has to be routed
+
 		//TOMAS
 		//Aca agregue || _flags & RH_FLAG_MOVIL
-		if (_tmpMessage.header.dest == _thisAddress || _tmpMessage.header.dest == RH_BROADCAST_ADDRESS || _flags & RH_FLAG_MOVIL) 
+		if (_tmpMessage.header.dest == _thisAddress || _tmpMessage.header.dest == RH_BROADCAST_ADDRESS)
 		{
+
 			//----------------------------------------------------------- AGREGADO POR MI
 			if (_tmpMessage.header.dest == _thisAddress)
 			{
@@ -273,10 +294,17 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 			}
 			else
 			{
+				Serial.print(F("El _flags en RHRouter: "));
+				Serial.println(_flags);
+
+				Serial.print(F("El _tmpMessage.flags en RHRouter: "));
+				Serial.println(_tmpMessage.header.flags);
+
 				Serial.print(F("El mensaje que recibí es de un broadcast. Me lo mandó el nodo "));
 				Serial.println(_tmpMessage.header.source);
 				Serial.println(F("--------------------------------------------------------------"));
 			}
+
 			// Deliver it here
 			if (source)
 				*source = _tmpMessage.header.source;
@@ -290,6 +318,9 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 			if (*len > msgLen)
 				*len = msgLen;
 			memcpy(buf, _tmpMessage.data, *len);
+
+			Serial.println(F("En RHRouter el paquete es: "));
+			Serial.println((char[60])buf);
 			return true; // Its for you!
 		}
 		else if (_tmpMessage.header.dest != RH_BROADCAST_ADDRESS && _tmpMessage.header.hops++ < _max_hops)

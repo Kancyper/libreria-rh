@@ -140,7 +140,7 @@ public:
     /// \param[in] buf Pointer to the binary message to send
     /// \param[in] len Number of octets to send
     /// \return true if the message was transmitted and an acknowledgement was received.
-    bool sendtoWait(uint8_t* buf, uint8_t len, uint8_t address);
+    bool sendtoWait(uint8_t* buf, uint8_t len, uint8_t address, uint8_t flags = 0);
 
     /// If there is a valid message available for this node, send an acknowledgement to the SRC
     /// address (blocking until this is complete), then copy the message to buf and return true

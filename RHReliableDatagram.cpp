@@ -45,7 +45,7 @@ uint8_t RHReliableDatagram::retries()
 }
 
 ////////////////////////////////////////////////////////////////////
-bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
+bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t flagsToSend)
 {
 	// Assemble the message
 	uint8_t thisSequenceNumber = ++_lastSequenceNumber;
@@ -56,7 +56,8 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
 
 		// Set and clear header flags depending on if this is an
 		// initial send or a retry.
-		uint8_t headerFlagsToSet = RH_FLAGS_NONE;
+		uint8_t headerFlagsToSet = RH_FLAGS_NONE || flagsToSend;
+
 		// Always clear the ACK flag
 		uint8_t headerFlagsToClear = RH_FLAGS_ACK;
 		if (retries == 1)
@@ -75,9 +76,12 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
 		sendto(buf, len, address);
 		waitPacketSent();
 
-		// Never wait for ACKS to broadcasts:
-		if (address == RH_BROADCAST_ADDRESS)
+		//TOMAS
+		//Nunca devolver un ACK a broadcasts enviados por otros AP. Solo devolver broadcasts a moviles
+		if (address == RH_BROADCAST_ADDRESS && !(flagsToSend & RH_FLAG_MOVIL))
+		{
 			return true;
+		}
 
 		if (retries > 1)
 			_retransmissions++;
@@ -99,8 +103,10 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
 				uint8_t from, to, id, flags;
 				if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 				{
-					// Now have a message: is it our ACK?
-					if (from == address && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
+					//TOMAS
+					//Agrego "&& flags & RH_FLAG_MOVIL" en la primera clasusula
+					if ((from == address || flagsToSend & RH_FLAG_MOVIL) && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
+					// if (from == address && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
 					{
 						// Its the ACK we are waiting for
 						return true;
@@ -139,6 +145,8 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 			// Its a normal message not an ACK
 			if (_to == _thisAddress)
 			{
+				Serial.println(F("En RHReliableDatagram el paquete recibido es: "));
+				Serial.println((char[60])buf);
 				// Its for this node and
 				// Its not a broadcast, so ACK it
 				// Acknowledge message with ACK set in flags and ID set to received ID
@@ -146,15 +154,24 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 			}
 
 			//TOMAS
-			//Si el mensaje fue enviado por un movil (tiene la flag movil), devolver un ACK
-			if ((_flags & RH_FLAG_MOVIL) && _thisAddress != 1)
+			//Si el mensaje fue enviado por un movil (tiene el flag movil), devolver un ACK
+			if ((_flags & RH_FLAG_MOVIL) && _thisAddress != GATEWAY_ADDRESS)
 			{
+				Serial.println(F("En RHReliableDatagram el paquete es: "));
+				Serial.println((char[60])buf);
+
 				Serial.print(F("Recibi un mensaje de broadcast del movil "));
 				Serial.print(_from);
 				Serial.println(F(". Ahora le envío un ACK"));
+
+				// RHGenericDriver RHgd;
+				// RH_RF95 holanda = new RHGenericDriver();
+				// RHGenericDriver::lastRssi;
+				// int16_t rssi = holanda->lastRssi();
+				// Serial.print(F("El ultimo RSSI es: "));
+				// Serial.println(rf95.lastRssi());
 				acknowledge(_id, _from);
 			}
-
 
 			// Filter out retried messages that we have seen before. This explicitly
 			// only filters out messages that are marked as retries to protect against

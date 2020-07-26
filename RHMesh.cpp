@@ -50,7 +50,7 @@ uint8_t RHMesh::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t f
 		if (!route && !doArp(address))
 			return RH_ROUTER_ERROR_NO_ROUTE;
 	}
- 
+
 	// Now have a route. Contruct an application layer message and send it via that route
 	MeshApplicationMessage *a = (MeshApplicationMessage *)&_tmpMessage;
 	a->header.msgType = RH_MESH_MESSAGE_TYPE_APPLICATION;
@@ -215,16 +215,28 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 	uint8_t _flags;
 	if (RHRouter::recvfromAck(_tmpMessage, &tmpMessageLen, &_source, &_dest, &_id, &_flags))
 	{
+
+		if (_flags & RH_FLAG_MOVIL)
+		{
+			if (source)
+				*source = _source;
+			if (dest)
+				*dest = _dest;
+			if (id)
+				*id = _id;
+			if (flags)
+				*flags = _flags;
+			uint8_t msgLen = tmpMessageLen;
+			if (*len > msgLen)
+				*len = msgLen;
+			memcpy(buf, _tmpMessage, *len);
+
+			return true;
+		}
+
 		MeshMessageHeader *p = (MeshMessageHeader *)&_tmpMessage;
 
-		//TOMAS
-		//Si recibe mensaje de movil, copiar el contenido de ese mensaje y enviarlo a gateway
-		// if (_flags & RH_FLAG_MOVIL)
-		// {
-		// 	sendtoWait(_tmpMessage, tmpMessageLen, GATEWAY_ADDRESS);
-		// }
-
-		if ((tmpMessageLen >= 1 && p->msgType == RH_MESH_MESSAGE_TYPE_APPLICATION) || _flags & RH_FLAG_MOVIL)
+		if (tmpMessageLen >= 1 && p->msgType == RH_MESH_MESSAGE_TYPE_APPLICATION)
 		{
 			MeshApplicationMessage *a = (MeshApplicationMessage *)p;
 			// Handle application layer messages, presumably for our caller
@@ -240,6 +252,11 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 			if (*len > msgLen)
 				*len = msgLen;
 			memcpy(buf, a->data, *len);
+			
+			Serial.println(F("En RHMesh el paquete es: "));
+			Serial.println((char[60])buf);
+			Serial.println(F("Y su tamaño es: "));
+			Serial.println(*len);
 
 			return true;
 		}
