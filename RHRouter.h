@@ -254,7 +254,7 @@ public:
     ///         - RH_ROUTER_ERROR_NO_ROUTE There was no route for dest in the local routing table
     ///         - RH_ROUTER_ERROR_UNABLE_TO_DELIVER Noyt able to deliver to the next hop 
     ///           (usually because it dod not acknowledge due to being off the air or out of range
-    uint8_t sendtoFromSourceWait(uint8_t* buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags = 0);
+    uint8_t sendtoFromSourceWait(uint8_t* buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags = 0, uint8_t id = _lastE2ESequenceNumber++);
 
     /// Starts the receiver if it is not running already.
     /// If there is a valid message available for this node (or RH_BROADCAST_ADDRESS), 

@@ -163,7 +163,8 @@ uint8_t RHRouter::sendtoWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t fl
 
 ////////////////////////////////////////////////////////////////////
 // Waits for delivery to the next hop (but not for delivery to the final destination)
-uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags)
+
+uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags, uint8_t id)
 {
 	if (((uint16_t)len + sizeof(RoutedMessageHeader)) > _driver.maxMessageLength())
 		return RH_ROUTER_ERROR_INVALID_LENGTH;
@@ -172,7 +173,7 @@ uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, 
 	_tmpMessage.header.source = source;
 	_tmpMessage.header.dest = dest;
 	_tmpMessage.header.hops = 0;
-	_tmpMessage.header.id = _lastE2ESequenceNumber++;
+	_tmpMessage.header.id = id;
 	_tmpMessage.header.flags = flags;
 	memcpy(_tmpMessage.data, buf, len);
 
@@ -258,6 +259,9 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 		Serial.println("--------------------------------------------------------------");
 		Serial.println(F("Acabo de recibir un mensaje"));
 
+
+		//TOMAS
+		//Si el mensaje fue enviado por un movil entonces el datagrama recibido es de tipo RHReliableDatagram
 		if (_flags & RH_FLAG_MOVIL)
 		{
 
@@ -280,8 +284,6 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 		peekAtMessage(&_tmpMessage, tmpMessageLen);
 		// See if its for us or has to be routed
 
-		//TOMAS
-		//Aca agregue || _flags & RH_FLAG_MOVIL
 		if (_tmpMessage.header.dest == _thisAddress || _tmpMessage.header.dest == RH_BROADCAST_ADDRESS)
 		{
 

@@ -26,6 +26,36 @@ RHMesh::RHMesh(RHGenericDriver &driver, uint8_t thisAddress)
 // Public methods
 
 ////////////////////////////////////////////////////////////////////
+bool sendtoWaitAckEndToEnd(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t flags)
+{
+	//Se haran 3 envios de mensaje a lo sumo
+	for (i = 0, i < = 2, i++)
+	{
+		//Si el mensaje no llega al próximo salto, entonces directamente volver a comenzar la iteración
+		if (RHMesh::sendtoWait(uint8_t * buf, uint8_t len, uint8_t address, uint8_t flags))
+		{
+			continue;
+		}
+
+		Serial.println(F("El mensaje llegó exitosamente al siguiente salto"));
+
+		//Esperar 10 segundos a recibir el ACK del destino, caso contrario, volver a enviar el mensaje
+		unsigned long nextTransmit = millis() + 10000;
+		while (nextTransmit > millis())
+		{
+			if (RHMesh::recvfromAck(uint8_t * buf, uint8_t * len, uint8_t * source, uint8_t * dest, uint8_t * id, uint8_t * flags))
+			{
+				//Si el paquete tiene la flag de ACK response, viene desde el destino y tiene el mismo id
+				if (flags & ROUTER_FLAGS_ACK_RESPONSE == 2 && source == address)
+				{
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 // Discovers a route to the destination (if necessary), sends and
 // waits for delivery to the next hop (but not for delivery to the final destination)
 uint8_t RHMesh::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t flags)
@@ -252,7 +282,17 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 			if (*len > msgLen)
 				*len = msgLen;
 			memcpy(buf, a->data, *len);
-			
+
+			//TOMAS
+			//Si pide un ACK entonces hay que enviar mensaje al nodo que originó el mensaje con flag de ROUTER_FLAGS_ACK_RESPONSE
+			if(_flags & ROUTER_FLAGS_ACK_PETITION){
+				Serial.print("Se ha recibido un mensaje que requiere un ACK de extremo a extremo. El AP origen es: ");
+				Serial.print(_source);
+				if(!RHMesh::sendtoWait(uint8_t '!', uint8_t 1, uint8_t _source, uint8_t ROUTER_FLAGS_ACK_RESPONSE)){
+					Serial.println(F("Se ha enviado el ACK de extremo a extremo"));
+				}
+			}
+
 			Serial.println(F("En RHMesh el paquete es: "));
 			Serial.println((char[60])buf);
 			Serial.println(F("Y su tamaño es: "));
