@@ -157,6 +157,7 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 
 			//TOMAS
 			//Si el mensaje fue enviado por un movil (tiene el flag movil), devolver un ACK
+			//La segunda clausula es para testing
 			if ((_flags & RH_FLAG_MOVIL) && _thisAddress != GATEWAY_ADDRESS)
 			{
 				Serial.println(F("En RHReliableDatagram el paquete es: "));
@@ -170,8 +171,16 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 				// RH_RF95 holanda = new RHGenericDriver();
 				// RHGenericDriver::lastRssi;
 				// int16_t rssi = holanda->lastRssi();
-				// Serial.print(F("El ultimo RSSI es: "));
-				// Serial.println(rf95.lastRssi());
+				Serial.print(F("El ultimo RSSI es: "));
+				Serial.println(_driver.lastRssi());
+
+				int espera = _driver.lastRssi() * -10;
+
+				Serial.print(F("La espera sera: "));
+				Serial.println(espera);
+
+				//funcion de delay de espera
+
 				acknowledge(_id, _from);
 			}
 
