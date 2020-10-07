@@ -26,33 +26,67 @@ RHMesh::RHMesh(RHGenericDriver &driver, uint8_t thisAddress)
 // Public methods
 
 ////////////////////////////////////////////////////////////////////
-bool sendtoWaitAckEndToEnd(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t flags)
+bool RHMesh::sendtoWaitAckEndToEnd(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t flags)
 {
 	//Se haran 3 envios de mensaje a lo sumo
-	for (i = 0, i < = 2, i++)
+	int i;
+	for (i = 0; i <= 2; i++)
 	{
+		Serial.print(F("Estoy por mandar un mensaje al nodo "));
+		Serial.print(dest);
+		Serial.print(F(" con la flag "));
+		Serial.print(flags);
+		Serial.print(F(" y el contenido "));
+		Serial.println(*buf);
+
 		//Si el mensaje no llega al próximo salto, entonces directamente volver a comenzar la iteración
-		if (RHMesh::sendtoWait(uint8_t * buf, uint8_t len, uint8_t address, uint8_t flags))
+		//La función sendToWait devuelve 0 si el mensaje es confirmado por el siguiente salto
+		if (RHMesh::sendtoWait(buf, len, dest, flags))
 		{
+			Serial.print(F("En i= "));
+			Serial.print(i);
+			Serial.println(F(" el mensaje NO llegó exitosamente al siguiente salto"));
+
 			continue;
 		}
 
-		Serial.println(F("El mensaje llegó exitosamente al siguiente salto"));
+		Serial.print(F("En i= "));
+		Serial.print(i);
+		Serial.println(F(" el mensaje llegó exitosamente al siguiente salto"));
+
+		uint8_t tmpMessageLen = sizeof(_tmpMessage);
+		uint8_t _source;
+		uint8_t _dest;
+		uint8_t _id;
+		uint8_t _flags;
 
 		//Esperar 10 segundos a recibir el ACK del destino, caso contrario, volver a enviar el mensaje
-		unsigned long nextTransmit = millis() + 10000;
-		while (nextTransmit > millis())
+
+		// _tmpMessage, &tmpMessageLen, &_source, &_dest, &_id, &_flags
+		if (RHMesh::recvfromAckTimeout(_tmpMessage, &tmpMessageLen, 10000, &_source, &_dest, &_id, &_flags))
 		{
-			if (RHMesh::recvfromAck(uint8_t * buf, uint8_t * len, uint8_t * source, uint8_t * dest, uint8_t * id, uint8_t * flags))
+			Serial.print(F("Recibi un mensaje en RHMesh::recvfromAckTimeout. Viene del nodo "));
+			Serial.print(_source);
+			Serial.print(" y el flag ");
+			Serial.print(_flags);
+			Serial.print(". El contenido es: ");
+			Serial.print(_tmpMessage[0]);
+			Serial.print(_tmpMessage[1]);
+			Serial.print(_tmpMessage[2]);
+			Serial.print(_tmpMessage[3]);
+			Serial.print(_tmpMessage[4]);
+			Serial.print(" y el largo de tmpMessageLen es ");
+			Serial.println(tmpMessageLen);
+
+
+			//Si el paquete tiene la flag de ACK response, viene desde el destino y tiene el mismo id
+			if ((_flags & ROUTER_FLAGS_ACK_RESPONSE) && _source == dest )
 			{
-				//Si el paquete tiene la flag de ACK response, viene desde el destino y tiene el mismo id
-				if (flags & ROUTER_FLAGS_ACK_RESPONSE == 2 && source == address)
-				{
-					return true;
-				}
+				return true;
 			}
 		}
 	}
+
 	return false;
 }
 
@@ -75,10 +109,16 @@ uint8_t RHMesh::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t f
 		if (!route)
 		{
 			Serial.println(F("---- No tengo la ruta guardada. Voy a intentar buscar una ruta "));
+			Serial.print(F("---- Voy a enviar un broadcast con un DISCOVERY REQUEST con nodo de destino numero "));
+			Serial.println(address);
 		}
 
 		if (!route && !doArp(address))
+		{
+			Serial.println(F("---- No encontré ruta"));
+
 			return RH_ROUTER_ERROR_NO_ROUTE;
+		}
 	}
 
 	// Now have a route. Contruct an application layer message and send it via that route
@@ -98,19 +138,16 @@ bool RHMesh::doArp(uint8_t address)
 	p->destlen = 1;
 	p->dest = address; // Who we are looking for
 
-	//----------------------------------------------------------- AGREGADO POR MI
-	Serial.print(F("---- Voy a enviar un broadcast con un DISCOVERY REQUEST con nodo de destino numero "));
-	Serial.println(address);
-
+	Serial.println(F("---- Estoy por enviar broadcast para encontrar ruta "));
 	uint8_t error = RHRouter::sendtoWait((uint8_t *)p, sizeof(RHMesh::MeshMessageHeader) + 2, RH_BROADCAST_ADDRESS);
 	if (error != RH_ROUTER_ERROR_NONE)
 	{
-		//----------------------------------------------------------- AGREGADO POR MI
-		Serial.println(F("---- No encontré ninguna ruta"));
-		Serial.println(F("--------------------------------------------------------------"));
+		Serial.println(F("---- Hubo un error en el envio del broadcast "));
 
 		return false;
 	}
+
+	Serial.println(F("---- El broadcast se envío correctamente"));
 
 	// Wait for a reply, which will be unicast back to us
 	// It will contain the complete route to the destination
@@ -160,7 +197,6 @@ void RHMesh::peekAtMessage(RoutedMessage *message, uint8_t messageLen)
 		//----------------------------------------------------------- AGREGADO POR MI
 		Serial.print(F("Recibí un mensaje de DISCOVERY RESPONSE del nodo "));
 		Serial.println(headerFrom());
-		Serial.println(F("--------------------------------------------------------------"));
 
 		// This is a unicast RH_MESH_MESSAGE_TYPE_ROUTE_DISCOVERY_RESPONSE messages
 		// being routed back to the originator here. Want to scrape some routing data out of the response
@@ -180,15 +216,23 @@ void RHMesh::peekAtMessage(RoutedMessage *message, uint8_t messageLen)
 		//----------------------------------------------------------- AGREGADO POR MI
 		if (message->header.dest == _thisAddress)
 		{
+			Serial.println(F("El DISCOVERY RESPONSE era para mí"));
+
 			for (i = 0; i < numRoutes; i++)
 			{
 				addRouteTo(d->route[i], headerFrom());
-				Serial.print(F("Voy a agregar a mi tabla al nodo "));
-				Serial.print(d->route[i]);
-				Serial.print(F(", cuyo next hop es "));
-				Serial.println(headerFrom());
+				// Serial.print(F("Voy a agregar a mi tabla al nodo "));
+				// Serial.print(d->route[i]);
+				// Serial.print(F(", cuyo next hop es "));
+				// Serial.println(headerFrom());
 			}
 		}
+		else
+		{
+			Serial.println(F("El DISCOVERY RESPONSE no era para mí"));
+		}
+
+		Serial.println(F("--------------------------------------------------------------"));
 	}
 	else if (messageLen > 1 && m->msgType == RH_MESH_MESSAGE_TYPE_ROUTE_FAILURE)
 	{
@@ -283,20 +327,35 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 				*len = msgLen;
 			memcpy(buf, a->data, *len);
 
+			Serial.print(F("************Estamos adentro del IF. El valor del mensaje es: "));
+			Serial.println((char *)a->data);
+			Serial.print(F("****-----***_tmpMessage vale: "));
+			Serial.println((char *)_tmpMessage);
+			Serial.print(F("****-----***&_tmpMessage vale: "));
+			Serial.println((uint32_t )&_tmpMessage);
+			Serial.print(F("****-----***p vale: "));
+			Serial.println((char *)p);
+			Serial.print(F("****-----***a vale: "));
+			Serial.println((uint32_t )a);
+
 			//TOMAS
 			//Si pide un ACK entonces hay que enviar mensaje al nodo que originó el mensaje con flag de ROUTER_FLAGS_ACK_RESPONSE
-			if(_flags & ROUTER_FLAGS_ACK_PETITION){
-				Serial.print("Se ha recibido un mensaje que requiere un ACK de extremo a extremo. El AP origen es: ");
-				Serial.print(_source);
-				if(!RHMesh::sendtoWait(uint8_t '!', uint8_t 1, uint8_t _source, uint8_t ROUTER_FLAGS_ACK_RESPONSE)){
-					Serial.println(F("Se ha enviado el ACK de extremo a extremo"));
+			if (_flags & ROUTER_FLAGS_ACK_PETITION)
+			{
+				Serial.print(F("Se ha recibido un mensaje que requiere un ACK de extremo a extremo. El AP origen es: "));
+				Serial.println(_source);
+
+				if (!RHMesh::sendtoWait((uint8_t*) "ACKtk", 6, _source, ROUTER_FLAGS_ACK_RESPONSE))
+				{
+					Serial.print(F("Se ha enviado el ACK de extremo a extremo con flag "));
+					Serial.println(ROUTER_FLAGS_ACK_RESPONSE);
 				}
 			}
 
-			Serial.println(F("En RHMesh el paquete es: "));
-			Serial.println((char[60])buf);
-			Serial.println(F("Y su tamaño es: "));
-			Serial.println(*len);
+			// Serial.println(F("En RHMesh el paquete es: "));
+			// Serial.println((char[60])buf);
+			// Serial.println(F("Y su tamaño es: "));
+			// Serial.println(*len);
 
 			return true;
 		}
@@ -321,21 +380,21 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 					return false; // Already been through us. Discard
 
 			//----------------------------------------------------------- AGREGADO POR MI
-			Serial.print(F("Los nodos en el array del DISCOVERY REQUEST son: ("));
-			for (i = 0; i < numRoutes; i++)
-			{
-				if (i != numRoutes - 1)
-				{
-					Serial.print(d->route[i]);
-					Serial.print(F(", "));
-				}
-				else
-				{
-					Serial.print(d->route[i]);
-				}
-			}
-			Serial.println(F(")"));
-			Serial.println(F("--------------------------------------------------------------"));
+			// Serial.print(F("Los nodos en el array del DISCOVERY REQUEST son: ("));
+			// for (i = 0; i < numRoutes; i++)
+			// {
+			// 	if (i != numRoutes - 1)
+			// 	{
+			// 		Serial.print(d->route[i]);
+			// 		Serial.print(F(", "));
+			// 	}
+			// 	else
+			// 	{
+			// 		Serial.print(d->route[i]);
+			// 	}
+			// }
+			// Serial.println(F(")"));
+			// Serial.println(F("--------------------------------------------------------------"));
 
 			addRouteTo(_source, headerFrom()); // The originator needs to be added regardless of node type
 

@@ -158,13 +158,17 @@ void RHRouter::clearRoutingTable()
 
 uint8_t RHRouter::sendtoWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t flags)
 {
+	if (dest == RH_BROADCAST_ADDRESS)
+	{
+		Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RHRouter::sendtoWait"));
+	}
 	return sendtoFromSourceWait(buf, len, dest, _thisAddress, flags);
 }
 
 ////////////////////////////////////////////////////////////////////
 // Waits for delivery to the next hop (but not for delivery to the final destination)
 
-uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags, uint8_t id)
+uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, uint8_t source, uint8_t flags)
 {
 	if (((uint16_t)len + sizeof(RoutedMessageHeader)) > _driver.maxMessageLength())
 		return RH_ROUTER_ERROR_INVALID_LENGTH;
@@ -173,9 +177,11 @@ uint8_t RHRouter::sendtoFromSourceWait(uint8_t *buf, uint8_t len, uint8_t dest, 
 	_tmpMessage.header.source = source;
 	_tmpMessage.header.dest = dest;
 	_tmpMessage.header.hops = 0;
-	_tmpMessage.header.id = id;
+	_tmpMessage.header.id = _lastE2ESequenceNumber++;
 	_tmpMessage.header.flags = flags;
 	memcpy(_tmpMessage.data, buf, len);
+
+	Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RHRouter::sendtoFromSourceWait"));
 
 	return route(&_tmpMessage, sizeof(RoutedMessageHeader) + len);
 }
@@ -192,6 +198,8 @@ uint8_t RHRouter::route(RoutedMessage *message, uint8_t messageLen)
 			return RH_ROUTER_ERROR_NO_ROUTE;
 		next_hop = route->next_hop;
 	}
+
+	Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RHRouter::route"));
 
 	if (!RHReliableDatagram::sendtoWait((uint8_t *)message, messageLen, next_hop))
 		return RH_ROUTER_ERROR_UNABLE_TO_DELIVER;
@@ -256,9 +264,8 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 #endif
 
 		//----------------------------------------------------------- AGREGADO POR MI
-		Serial.println("--------------------------------------------------------------");
-		Serial.println(F("Acabo de recibir un mensaje"));
-
+		// Serial.println("--------------------------------------------------------------");
+		// Serial.println(F("Acabo de recibir un mensaje"));
 
 		//TOMAS
 		//Si el mensaje fue enviado por un movil entonces el datagrama recibido es de tipo RHReliableDatagram
@@ -278,34 +285,36 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 				*len = msgLen;
 			memcpy(buf, &_tmpMessage, *len);
 
-			return true; 
+			return true;
 		}
 
+		//Chequea si el mensaje es de Discovery response o route failure
+		// Serial.println(F("Estoy por entrar a peekAtMessage...."));
 		peekAtMessage(&_tmpMessage, tmpMessageLen);
-		// See if its for us or has to be routed
+		// Serial.println(F("Ya sali de peekAtMessage"));
 
+		// See if its for us or has to be routed
 		if (_tmpMessage.header.dest == _thisAddress || _tmpMessage.header.dest == RH_BROADCAST_ADDRESS)
 		{
 
 			//----------------------------------------------------------- AGREGADO POR MI
-			if (_tmpMessage.header.dest == _thisAddress)
-			{
-				Serial.print(F("El mensaje que recibí SÍ es para mí. Me lo mandó el nodo "));
-				Serial.println(_tmpMessage.header.source);
-				Serial.println(F("--------------------------------------------------------------"));
-			}
-			else
-			{
-				Serial.print(F("El _flags en RHRouter: "));
-				Serial.println(_flags);
+			// if (_tmpMessage.header.dest == _thisAddress)
+			// {
+			// Serial.print(F("El mensaje que recibí SÍ es para mí. Me lo mandó el nodo "));
+			// Serial.println(_tmpMessage.header.source);
+			// Serial.print(F("El _flags en RHRouter: "));
+			// Serial.println(_flags);
+			// Serial.println(F("--------------------------------------------------------------"));
+			// }
+			// else
+			// {
+			// Serial.print(F("El _tmpMessage.flags en RHRouter: "));
+			// Serial.println(_tmpMessage.header.flags);
 
-				Serial.print(F("El _tmpMessage.flags en RHRouter: "));
-				Serial.println(_tmpMessage.header.flags);
-
-				Serial.print(F("El mensaje que recibí es de un broadcast. Me lo mandó el nodo "));
-				Serial.println(_tmpMessage.header.source);
-				Serial.println(F("--------------------------------------------------------------"));
-			}
+			// Serial.print(F("El mensaje que recibí es de un broadcast. Me lo mandó el nodo "));
+			// Serial.println(_tmpMessage.header.source);
+			// Serial.println(F("--------------------------------------------------------------"));
+			// }
 
 			// Deliver it here
 			if (source)
@@ -321,8 +330,8 @@ bool RHRouter::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t 
 				*len = msgLen;
 			memcpy(buf, _tmpMessage.data, *len);
 
-			Serial.println(F("En RHRouter el paquete es: "));
-			Serial.println((char[60])buf);
+			// Serial.println(F("En RHRouter el paquete es: "));
+			// Serial.println((char[60])buf);
 			return true; // Its for you!
 		}
 		else if (_tmpMessage.header.dest != RH_BROADCAST_ADDRESS && _tmpMessage.header.hops++ < _max_hops)

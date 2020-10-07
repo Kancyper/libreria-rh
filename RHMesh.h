@@ -21,9 +21,9 @@
 //TOMAS
 //Flags para el ACK de extremo a extremo
 //Flag que va en el paquete que quiere recibir un ACK del destino
-#define ROUTER_FLAGS_ACK_PETITION 0x01
+#define ROUTER_FLAGS_ACK_PETITION 0x04
 //Flag que va en el ACK enviado por el destinatario al que originó el mensaje
-#define ROUTER_FLAGS_ACK_RESPONSE 0x02
+#define ROUTER_FLAGS_ACK_RESPONSE 0x08
 
 /////////////////////////////////////////////////////////////////////
 /// \class RHMesh RHMesh.h <RHMesh.h>

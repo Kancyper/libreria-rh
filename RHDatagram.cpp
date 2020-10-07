@@ -5,10 +5,9 @@
 
 #include <RHDatagram.h>
 
-RHDatagram::RHDatagram(RHGenericDriver& driver, uint8_t thisAddress) 
-    :
-    _driver(driver),
-    _thisAddress(thisAddress)
+RHDatagram::RHDatagram(RHGenericDriver &driver, uint8_t thisAddress)
+    : _driver(driver),
+      _thisAddress(thisAddress)
 {
 }
 
@@ -18,7 +17,7 @@ bool RHDatagram::init()
 {
     bool ret = _driver.init();
     if (ret)
-	setThisAddress(_thisAddress);
+        setThisAddress(_thisAddress);
     return ret;
 }
 
@@ -30,21 +29,31 @@ void RHDatagram::setThisAddress(uint8_t thisAddress)
     _thisAddress = thisAddress;
 }
 
-bool RHDatagram::sendto(uint8_t* buf, uint8_t len, uint8_t address)
+bool RHDatagram::sendto(uint8_t *buf, uint8_t len, uint8_t address)
 {
+    Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RHDatagram::sendto"));
+
     setHeaderTo(address);
+
+    Serial.print(F("---- Setee el header correctamente en RHDatagram::sendto para la address "));
+    Serial.println(address);
+
     return _driver.send(buf, len);
 }
 
-bool RHDatagram::recvfrom(uint8_t* buf, uint8_t* len, uint8_t* from, uint8_t* to, uint8_t* id, uint8_t* flags)
+bool RHDatagram::recvfrom(uint8_t *buf, uint8_t *len, uint8_t *from, uint8_t *to, uint8_t *id, uint8_t *flags)
 {
     if (_driver.recv(buf, len))
     {
-	if (from)  *from =  headerFrom();
-	if (to)    *to =    headerTo();
-	if (id)    *id =    headerId();
-	if (flags) *flags = headerFlags();
-	return true;
+        if (from)
+            *from = headerFrom();
+        if (to)
+            *to = headerTo();
+        if (id)
+            *id = headerId();
+        if (flags)
+            *flags = headerFlags();
+        return true;
     }
     return false;
 }
@@ -118,6 +127,3 @@ uint8_t RHDatagram::headerFlags()
 {
     return _driver.headerFlags();
 }
-
-
-

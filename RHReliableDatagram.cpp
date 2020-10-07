@@ -47,6 +47,7 @@ uint8_t RHReliableDatagram::retries()
 ////////////////////////////////////////////////////////////////////
 bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, uint8_t flagsToSend)
 {
+
 	// Assemble the message
 	uint8_t thisSequenceNumber = ++_lastSequenceNumber;
 	uint8_t retries = 0;
@@ -74,13 +75,21 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 		}
 		setHeaderFlags(headerFlagsToSet, headerFlagsToClear);
 
+		Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RHReliableDatagram::sendtoWait"));
+
 		sendto(buf, len, address);
+
+		Serial.println(F("---- Envié el mensaje, ahora espero que waitPacketSent() me confirme que se envió"));
+		
 		waitPacketSent();
+
+		Serial.println(F("---- waitPacketSent() me confirmó que se envió el paquete"));
 
 		//TOMAS
 		//Nunca devolver un ACK a broadcasts enviados por otros AP. Solo devolver broadcasts a moviles
 		if (address == RH_BROADCAST_ADDRESS && !(flagsToSend & RH_FLAG_MOVIL))
 		{
+			Serial.println(F("---- Como soy broadcast entonces no espero ACK. Devuelvo true desde RHReliableDatagram::sendtoWait"));
 			return true;
 		}
 
@@ -104,7 +113,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 				uint8_t from, to, id, flags;
 				if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 				{
-          
+
 					//TOMAS
 					//Agrego "&& flags & RH_FLAG_MOVIL" en la primera clasusula
 					if ((from == address || flagsToSend & RH_FLAG_MOVIL) && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
@@ -147,8 +156,8 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 			// Its a normal message not an ACK
 			if (_to == _thisAddress)
 			{
-				Serial.println(F("En RHReliableDatagram el paquete recibido es: "));
-				Serial.println((char[60])buf);
+				// Serial.println(F("En RHReliableDatagram el paquete recibido es: "));
+				// Serial.println((char[60])buf);
 				// Its for this node and
 				// Its not a broadcast, so ACK it
 				// Acknowledge message with ACK set in flags and ID set to received ID
@@ -159,12 +168,12 @@ bool RHReliableDatagram::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *from, 
 			//Si el mensaje fue enviado por un movil (tiene el flag movil), devolver un ACK
 			if ((_flags & RH_FLAG_MOVIL) && _thisAddress != GATEWAY_ADDRESS)
 			{
-				Serial.println(F("En RHReliableDatagram el paquete es: "));
-				Serial.println((char[60])buf);
+				// Serial.println(F("En RHReliableDatagram el paquete es: "));
+				// Serial.println((char[60])buf);
 
-				Serial.print(F("Recibi un mensaje de broadcast del movil "));
-				Serial.print(_from);
-				Serial.println(F(". Ahora le envío un ACK"));
+				// Serial.print(F("Recibi un mensaje de broadcast del movil "));
+				// Serial.print(_from);
+				// Serial.println(F(". Ahora le envío un ACK"));
 
 				// RHGenericDriver RHgd;
 				// RH_RF95 holanda = new RHGenericDriver();

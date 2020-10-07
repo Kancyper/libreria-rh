@@ -304,10 +304,13 @@ bool RH_RF95::recv(uint8_t *buf, uint8_t *len)
 
 bool RH_RF95::send(const uint8_t *data, uint8_t len)
 {
+    Serial.println(F("---- Soy el mensaje de broadcast, llegué bien a RH_RF95::send"));
     if (len > RH_RF95_MAX_MESSAGE_LEN)
         return false;
 
+    Serial.println(F("---- Antes de waitPacketSent()"));
     waitPacketSent(); // Make sure we dont interrupt an outgoing message
+    Serial.println(F("---- Después de waitPacketSent()"));
     setModeIdle();
 
     if (!waitCAD())
