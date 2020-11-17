@@ -215,6 +215,25 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 	uint8_t _flags;
 	if (RHRouter::recvfromAck(_tmpMessage, &tmpMessageLen, &_source, &_dest, &_id, &_flags))
 	{
+
+		if (_flags & RH_FLAG_MOVIL)
+		{
+			if (source)
+				*source = _source;
+			if (dest)
+				*dest = _dest;
+			if (id)
+				*id = _id;
+			if (flags)
+				*flags = _flags;
+			uint8_t msgLen = tmpMessageLen;
+			if (*len > msgLen)
+				*len = msgLen;
+			memcpy(buf, _tmpMessage, *len);
+
+			return true;
+		}
+
 		MeshMessageHeader *p = (MeshMessageHeader *)&_tmpMessage;
 
 		if (tmpMessageLen >= 1 && p->msgType == RH_MESH_MESSAGE_TYPE_APPLICATION)
@@ -233,6 +252,11 @@ bool RHMesh::recvfromAck(uint8_t *buf, uint8_t *len, uint8_t *source, uint8_t *d
 			if (*len > msgLen)
 				*len = msgLen;
 			memcpy(buf, a->data, *len);
+			
+			Serial.println(F("En RHMesh el paquete es: "));
+			Serial.println((char[60])buf);
+			Serial.println(F("Y su tamaño es: "));
+			Serial.println(*len);
 
 			return true;
 		}
