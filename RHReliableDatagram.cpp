@@ -78,7 +78,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 		waitPacketSent();
 
 		//TOMAS
-		//Nunca devolver un ACK a broadcasts enviados por otros AP. Solo devolver broadcasts a moviles
+		//Nunca esperar un ACK de broadcasts enviados por Access Points. Solo esperar ACKs de broadcasts si se trata de moviles
 		if (address == RH_BROADCAST_ADDRESS && !(flagsToSend & RH_FLAG_MOVIL))
 		{
 			return true;
@@ -106,7 +106,8 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address, 
 				{
           
 					//TOMAS
-					//Agrego "&& flags & RH_FLAG_MOVIL" en la primera clasusula
+					//Agrego " flags || RH_FLAG_MOVIL" en la primera clasusula
+					//Esto significa que o estamos recibiendo un ACK comun o bien estamos recibiendo un ACK de un Access Point de un broadcast que mandamos desde un movil
 					if ((from == address || flagsToSend & RH_FLAG_MOVIL) && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
 					// if (from == address && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
 					{
