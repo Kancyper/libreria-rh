@@ -81,7 +81,7 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
 		waitPacketSent();
 
 		//TOMAS
-		//Vamos a esperar ACK de los broadcasts, por lo tanto voy a comentar las líneasZ de abajo
+		//Vamos a esperar ACK de los broadcasts, por lo tanto voy a comentar las líneas de abajo
 		// Never wait for ACKS to broadcasts:
 		// if (address == RH_BROADCAST_ADDRESS)
 		//     return true;
@@ -107,8 +107,10 @@ bool RHReliableDatagram::sendtoWait(uint8_t *buf, uint8_t len, uint8_t address)
 				if (recvfrom(0, 0, &from, &to, &id, &flags)) // Discards the message
 				{
 					//TOMAS
-					//Aqui tengo que borrar "from == address"
-					// Now have a message: is it our ACK?
+					//Aqui sbajo tengo que borrar "from == address", porque estamos recibiendo un ACK de un broadcast que enviamos, por
+					//lo tanto no sabemos quien lo respondera
+
+					//Now have a message: is it our ACK?
 					//if (from == address && to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
 					if (to == _thisAddress && (flags & RH_FLAGS_ACK) && (id == thisSequenceNumber))
 					{
